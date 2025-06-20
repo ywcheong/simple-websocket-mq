@@ -14,26 +14,26 @@
 
 ### 1.3. 용어
 
-| 용어                      | 뜻                                                                            |
-| ------------------------- | ----------------------------------------------------------------------------- |
-| 발신자(Sender)            | 알림을 보내는 웹 클라이언트                                                   |
-| 수신자(Receiver)          | 알림을 받는 웹 클라이언트                                                     |
-| 웹 클라이언트(Web Client) | 웹 인터페이스를 통해 접속한 사람                                              |
-| 알림(Notification)        | 발신자가 수신자에게 보내는 정보. 제목과 내용으로 구성됨.                      |
-| 주제(Topic)               | 알림의 주제. 한 알림은 여러 주제를 가질 수 있음. 수신자는 특정 주제를 구독함. |
-| 구독(Subscribe)           | 수신자가 특정 주제에 해당되는 모든 알림을 받겠다는 의사표시                   |
+| 용어                       | 뜻                                                                            |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| 알림발신자(PushSender)     | 알림을 보내는 클라이언트                                                      |
+| 알림수신자(PushReceiver)   | 알림을 받는 클라이언트                                                        |
+| 알림클라이언트(PushClient) | 웹 인터페이스를 통해 접속한 사람                                              |
+| 알림(Push)                 | 발신자가 수신자에게 보내는 정보. 제목과 내용으로 구성됨.                      |
+| 알림주제(PushTopic)        | 알림의 주제. 한 알림은 여러 주제를 가질 수 있음. 수신자는 특정 주제를 구독함. |
+| 알림구독(PushSubscribe)    | 수신자가 특정 주제에 해당되는 모든 알림을 받겠다는 의사표시                   |
 
 
 ## 2. 프로젝트의 요구사항 정의
 
 ### 2.1. 외부 객체 정의
 
-- 웹 클라이언트
+- 알림 클라이언트
   - 알림을 송수신할 잠재력이 있는 웹 클라이언트. 프론트엔드 UI를 통해 상호작용한다.
   - 발신자와 수신자로 나뉜다.
-- 발신자
+- 알림 발신자
   - 웹 클라이언트 중 알림을 보내는 자.
-- 수신자
+- 알림 수신자
   - 웹 클라이언트 중 알림을 받는 자.
 
 ### 2.2. 요구사항 정의
@@ -113,13 +113,13 @@ flowchart TD
         (Websocket)"]
     end
 
-    subgraph SenderServer["송신 API 서버"]
+    subgraph SenderServer["송신 API 서버 (0..N)"]
         SenderComponent["알림 송신 컴포넌트"]
     end
 
-    subgraph ReceiverServer["수신 API 서버"]
+    subgraph ReceiverServer["수신 API 서버 (0..M)"]
         WebsocketComponent["Websocket 컴포넌트"]
-        SubscribeComponent["주제 구독 컴포넌트"]
+        SubscribeComponent["알림 구독 컴포넌트"]
         ReceiverComponent["알림 수신 컴포넌트"]
     end
 
@@ -168,7 +168,7 @@ flowchart TD
 ```json
 {
   "title": "example title here",
-  "contents": "example contents here",
+  "body": "example body here",
   "topics": [
     "example-topic-1",
     "example-topic-2"
@@ -184,98 +184,104 @@ flowchart TD
 
 #### 수신 API 서버
 
-| 엔드포인트 | 메서드       | 설명             |
-| ---------- | ------------ | ---------------- |
-| `/connect` | GET(UPGRADE) | 수신 서버에 연결 |
+| 엔드포인트    | 메서드          | 설명             |
+| ------------- | --------------- | ---------------- |
+| `/ws/connect` | HTTP UPGRADE    | 수신 서버에 연결 |
+| `/ws/stream`  | Websocket STOMP | Websocket 통신   |
 
-- `/connect`
+- `/ws/connect`
   - Request
-    - todo: websocket의 처리 방식에 대해 공부...
+    - Websocket 연결 업그레이드 요청
   - Response
     - `101 SWITCHING PROTOCOL`: Websocket 수립
     - `503 SERVICE UNAVAILABLE`: 서버 Busy
-
-#### Websocket STOMP (수신자UI ~ 수신API서버)
-
-- 주제 구독 (수신자 -> 수신API서버)
-  - Websocket 프레임: `SUBSCRIBE destination:/topic/{example-topic}`
-- 주제 구독취소 (수신자 -> 수신API서버)
-  - Websocket 프레임: `UNSUBSCRIBE /topic/{example-topic}`
-- 알림 수신 (수신API서버 -> 수신자)
-  - 브로드캐스트 타깃: `/topic/{example-topic}`
-  - Websocket 프레임: `Notification` 클래스의 JSON Serialization
+- `/ws/stream`
+  - 주제 구독 (수신자 -> 수신API서버)
+    - Websocket 프레임: `SUBSCRIBE destination:/topic/{example-topic}`
+  - 주제 구독취소 (수신자 -> 수신API서버)
+    - Websocket 프레임: `UNSUBSCRIBE /topic/{example-topic}`
+  - 알림 수신 (수신API서버 -> 수신자)
+    - 브로드캐스트 타깃: `/topic/{example-topic}`
+    - Websocket 프레임: `PushEvent` 클래스의 JSON Serialization
 
 #### Kafka Message (송신API서버 ~ Kafka ~ 수신API서버)
 
-- `Notification` 클래스의 Serialization을 메시지로 사용
+- `PushEvent` 클래스의 Serialization을 메시지로 사용
   - Spring Boot의 Serial/Deserialization 지원 사용
 
-### 클래스 관점 정의
+---
 
-- 도메인
-  - `Notification` (엔티티)
-    - title: `NotificationTitle`
-    - contents: `NotificationContents`
-    - topicList: `NotificationTopicList`
-    - issuedAt: `NotificationTimestamp`
-  - `NotificationTitle` (값)
-    - value: string
-  - `NotificationContents` (값)
-    - value: string
-  - `NotificationTopicList` (값)
-    - value: `TopicList`
-  - `NotificationTimestamp` (값)
-    - value: `java.util.Date`
-  - `TopicList` (값)
-    - topics: `List[Topic]`
-  - `TopicListBuilder` (빌더)
-      - .buildFrom: `(TopicList) => TopicListBuilder`
-      - .addTopic: `(Topic) => TopicListBuilder`
-      - .removeTopic: `(Topic) => TopicListBuilder`
-      - .build: `() => TopicList`
-  - `Topic` (값)
-    - value: string
-  - `Receiver` (엔티티)
-    - sessionId: string (= WebSocketSession)
-    - subscribedTopics: `TopicList`
-    - .sendNotification: `(Notification) => bool`
-      - Websocket 통해 실제로 메시지 전달하는 로직
-  - `MessageBrokerService` (도메인 서비스)
-    - .subscribe: `(Receiver, Topic) => bool`
-    - .unsubscribe: `(Receiver, Topic) => void`
-    - .unsubscribeAll: `(Receiver) => void`
-    - .notify: `(Notification) => void`
-- 공용 애플리케이션 컴포넌트
-  - `NotificationDTO`
-    - .from: `staticmethod (Notification) => NotificationDTO`
-    - .make: `() => Notification`
-- 애플리케이션 서비스 (Controller-Service-Domain-Repository, 도메인 레이어는 상단에 기술)
-  - 송신 API 서버
-    - 컨트롤러
-      - `NotificationSendController`
-    - 앱 서비스
-      - `NotificationSendServiceDefault` (impl `NotificationSendService`)
-    - 리포지토리
-      - `MessagePublishRepositoryKafka` (impl `MessagePublishRepository`)
-  - 수신 API 서버
-    - 컨트롤러
-      - `WebsocketConnectController`
-      - `SubscribeController`
-      - `UnsubscribeController`
-      - `WebsocketDisconnectController`
-    - 앱 서비스
-      - `NewReceiverServiceDefault` (impl `NewReceiverService`)
-      - `SubscribeServiceDefault` (impl `SubscribeService`)
-      - `UnsubscribeServiceDefault` (impl `UnsubscribeService`)
-      - `KillReceiverServiceDefault` (impl `KillReceiverService`)
-    - 리포지토리
-      - `ReceiverRepositoryInMemory` (impl `ReceiverRepository`)
-        - .create: `(Receiver) => bool`
-        - .find: `(sessionId) => Receiver`
-        - .update: `(sessionId, Receiver) => bool`
-        - .delete: `(sessionId) => bool`
-      - `MessageReceiveRepositoryKafka` (impl `MessageReceiveRepository`)
-        - .receive: `(Notification) => void`
+### 도메인 관점 정의
+
+*아직 도메인 주도 설계에 익숙하지 않기 때문에 이 부분은 LLM - ChatGPT o3 - 의 도움을 받아서 설계하였다.*
+
+#### 도메인 요소 색인
+
+| 이름               | 종류                   | Aggregate | 주요 필드 / 속성                                                        | 핵심 메서드                                              | 발행‧사용 이벤트   |
+| ------------------ | ---------------------- | --------- | ----------------------------------------------------------------------- | -------------------------------------------------------- | ------------------ |
+| Receiver           | Entity (AR)            | Receiver  | `receiverId:ReceiverId` `subscriptions:Set<Topic>`                      | `subscribe()` `unsubscribe()` `canReceive()` `receive()` | PushDeliveredEvent |
+| Topic              | Value Object           | —         | `value:String`                                                          | —                                                        | —                  |
+| PushTitle          | Value Object           | —         | `value:String`                                                          | —                                                        | —                  |
+| PushBody           | Value Object           | —         | `value:String`                                                          | —                                                        | —                  |
+| PushEvent          | Value Object (Complex) | —         | `title:PushTitle` `body:PushBody` `topics:Set<Topic>` `occurredAt:Date` | —                                                        | PushPublishedEvent |
+| PushPublishedEvent | Domain Event           | —         | `event:PushEvent`                                                       | —                                                        | —                  |
+| PushDeliveredEvent | Domain Event           | —         | `receiverId:ReceiverId` `event:PushEvent`                               | —                                                        | —                  |
+
+#### Entity : Receiver
+
+| Key             | Value                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------- |
+| Aggregate Root  | 자기 자신                                                                                     |
+| 식별자          | `receiverId : ReceiverId`                                                                     |
+| 상태            | `subscriptions : Set<Topic>`                                                                  |
+| 제약            | 구독 Topic 최대개수 제한, 중복 Topic 구독 금지                                                |
+| 행동            | `subscribe(Topic)`<br>`unsubscribe(Topic)`<br>`canReceive(PushEvent)`<br>`receive(PushEvent)` |
+| 발행하는 이벤트 | `PushDeliveredEvent(receiverId, eventId)`                                                     |
+
+#### Value Object : Topic, PushTitle, PushBody
+
+| VO                 | 제한    |
+| ------------------ | ------- |
+| Topic : String     | 1~60자  |
+| PushTitle : String | 1~60자  |
+| PushBody : String  | 1~240자 |
+
+#### Value Object: PushEvent
+
+| 필드       | 타입          | 비고                 |
+| ---------- | ------------- | -------------------- |
+| title      | PushTitle     | —                    |
+| body       | PushBody      | —                    |
+| topics     | List\<Topic>  | 1개 이상             |
+| occurredAt | ZonedDateTime | 생성 시 `now()` 고정 |
+
+#### Domain Event : PushPublishedEvent, PushDeliveredEvent
+
+| Event              | 페이로드                                       | 설명                          |
+| ------------------ | ---------------------------------------------- | ----------------------------- |
+| PushPublishedEvent | `pushEvent : PushEvent`                        | 알림이 시스템에 발행됨        |
+| PushDeliveredEvent | `receiverId: ReceiverId`<br>`pushEvent: Event` | 특정 수신자에게 알림을 전달함 |
+
+#### 애플리케이션
+
+```kotlin
+// Sender Domain -> App
+interface PushPublishPort {
+  fun publish(event: PushEvent)
+}
+
+// Receiver Domain -> App
+interface PushDeliveryPort {
+  fun deliver(receiver: Reciever, event: PushEvent)
+}
+
+// Repository
+interface ReceiverRepository {
+    fun find(id: ReceiverId): Receiver
+    fun delete(id: ReceiverId): Receiver
+    fun save(receiver: Receiver)
+}
+```
 
 ## 4. 참고자료
 
