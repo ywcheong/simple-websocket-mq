@@ -6,7 +6,7 @@ data class Receiver(
     val receiverId: ReceiverId, val subscription: Set<PushTopic>
 ) {
     init {
-        require(subscription.size <= MAX_SUBSCRIPTIONS) {
+        check(subscription.size <= MAX_SUBSCRIPTIONS) {
             "최대 ${MAX_SUBSCRIPTIONS}개의 주제만 구독할 수 있습니다."
         }
     }
