@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: simple-websocket-mq
+
+smq:
+  kafka-topic-name: simple-websocket-mq
