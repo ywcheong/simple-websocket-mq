@@ -1,8 +1,28 @@
 #!/bin/bash
 
-COMPOSE_FILE="./docker/docker-compose.yml"
+PROD_COMPOSE_FILE="./docker/prod.docker-compose.yml"
+DEV_COMPOSE_FILE="./docker/dev.docker-compose.yml"
 
 case "$1" in
+  prod)
+    COMPOSE_FILE=$PROD_COMPOSE_FILE
+    ;;
+  dev)
+    COMPOSE_FILE=$DEV_COMPOSE_FILE
+    ;;
+  clean)
+    echo "Cleaning Gradle build files..."
+    ./gradlew clean
+    ./gradlew --stop
+    exit 0
+    ;;
+  *)
+    echo "Usage: $0 {prod|dev} {start|stop} OR $0 clean"
+    exit 1
+    ;;
+esac
+
+case "$2" in
   start)
     echo "Building and copying server.jar..."
     ./gradlew dockerMount
@@ -10,7 +30,7 @@ case "$1" in
     docker compose -f "$COMPOSE_FILE" up -d
     if [ $? -ne 0 ]; then
         sleep 1s
-        ./smq-server.sh stop
+        $0 $1 stop
     fi
     ;;
   stop)
@@ -18,13 +38,8 @@ case "$1" in
     docker compose -f "$COMPOSE_FILE" down
     docker system prune -f
     ;;
-  clean)
-    echo "Cleaning Gradle build files..."
-    ./gradlew clean
-    ./gradlew --stop
-    ;;
   *)
-    echo "Usage: $0 {start|stop|clean}"
+    echo "Usage: $0 {prod|dev} {start|stop} OR $0 clean"
     exit 1
     ;;
 esac

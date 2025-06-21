@@ -1,6 +1,38 @@
+# 공통 설정
+
 spring:
   application:
     name: simple-websocket-mq
+  profiles:
+    default: prod # 기본 프로필: [prod]
 
 smq:
   kafka-topic-name: ${KAFKA_TOPIC_NAME}
+
+---
+
+# Production Infra 설정 [prod]
+spring:
+  config:
+    activate:
+      on-profile: prod
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: smq-server-group
+      auto-offset-reset: latest # SMQ 특성상 옛날 메시지는 완전히 불필요: ~~earliest~~ vs **latest**
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+
+---
+
+# Developing Infra 설정 [dev]
+spring:
+  config:
+    activate:
+      on-profile: dev
+
