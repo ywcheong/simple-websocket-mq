@@ -1,5 +1,6 @@
 package com.ywcheong.smq.receiver
 
+import com.ywcheong.smq.domain.PushTopic
 import com.ywcheong.smq.domain.Receiver
 import com.ywcheong.smq.domain.ReceiverId
 import org.springframework.stereotype.Repository
@@ -10,6 +11,7 @@ interface ReceiverRepository {
     fun save(receiver: Receiver): Receiver
     fun delete(receiver: Receiver)
     fun find(receiverId: ReceiverId): Receiver?
+    fun findAllWithTopics(topics: List<PushTopic>): List<Receiver>
 }
 
 @Repository
@@ -33,6 +35,17 @@ class InMemoryReceiverRepository : ReceiverRepository {
     override fun find(receiverId: ReceiverId): Receiver? {
         lock.readLock().withLock {
             return memoryMap[receiverId]
+        }
+    }
+
+    override fun findAllWithTopics(topics: List<PushTopic>): List<Receiver> {
+        lock.readLock().withLock {
+            return memoryMap.filter {
+                val receiver = it.value
+                topics.any { eachTopic ->
+                    receiver.isSubscribed(eachTopic)
+                }
+            }.map { it.value }
         }
     }
 

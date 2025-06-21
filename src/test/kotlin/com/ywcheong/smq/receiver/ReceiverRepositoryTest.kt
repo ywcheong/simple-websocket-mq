@@ -51,6 +51,33 @@ class ReceiverRepositoryTest {
     }
 
     @Test
+    fun `findAllWithTopics should return receivers subscribed to any of the given topics`() {
+        val repo: ReceiverRepository = InMemoryReceiverRepository()
+        val receiver1 = Receiver(ReceiverId("1"), setOf(PushTopic("topicA"), PushTopic("topicB")))
+        val receiver2 = Receiver(ReceiverId("2"), setOf(PushTopic("topicA"), PushTopic("topicC")))
+        val receiver3 = Receiver(ReceiverId("3"), setOf(PushTopic("topicD")))
+
+        repo.save(receiver1)
+        repo.save(receiver2)
+        repo.save(receiver3)
+
+        val found = repo.findAllWithTopics(listOf(PushTopic("topicB"), PushTopic("topicD")))
+        assertTrue(found.contains(receiver1))
+        assertFalse(found.contains(receiver2))
+        assertTrue(found.contains(receiver3))
+        assertEquals(2, found.size)
+
+        val found2 = repo.findAllWithTopics(listOf(PushTopic("topicA")))
+        assertTrue(found2.contains(receiver1))
+        assertTrue(found2.contains(receiver2))
+        assertFalse(found2.contains(receiver3))
+        assertEquals(2, found2.size)
+
+        val found3 = repo.findAllWithTopics(listOf(PushTopic("notExist")))
+        assertTrue(found3.isEmpty())
+    }
+
+    @Test
     fun `concurrent save, delete, and find should not cause race condition`() {
         val repo = InMemoryReceiverRepository()
         val receiverCount = 100000

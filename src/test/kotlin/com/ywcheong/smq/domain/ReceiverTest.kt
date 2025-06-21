@@ -2,7 +2,6 @@ package com.ywcheong.smq.domain
 
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import java.util.*
 
 
 class ReceiverIdTest {
@@ -81,30 +80,17 @@ class ReceiverCanReceiveTest {
     private val receiverId = ReceiverId("user4")
     private val topicA = PushTopic("A")
     private val topicB = PushTopic("B")
-    private val title = PushTitle("Title")
-    private val body = PushBody("Body")
-    private val date = Date()
 
     @Test
-    fun `canReceive should return true if any topic matches`() {
+    fun `isSubscribed should return true if topic matches`() {
         val receiver = Receiver(receiverId, setOf(topicA, topicB))
-        val pushUnit = PushUnit(title, body, setOf(topicB), date)
-        assertTrue(receiver.canReceive(pushUnit))
+        assertTrue(receiver.isSubscribed(topicA))
+        assertTrue(receiver.isSubscribed(topicB))
     }
 
     @Test
-    fun `canReceive should return false if no topic matches`() {
+    fun `isSubscribed should return false if topic not  matches`() {
         val receiver = Receiver(receiverId, setOf(topicA))
-        val pushUnit = PushUnit(title, body, setOf(topicB), date)
-        assertFalse(receiver.canReceive(pushUnit))
-    }
-
-    @Test
-    fun `receive should create PushDeliveredEvent with correct data`() {
-        val receiver = Receiver(receiverId, setOf(topicA))
-        val pushUnit = PushUnit(title, body, setOf(topicA), date)
-        val event = receiver.receive(pushUnit)
-        assertEquals(receiverId, event.receiverId)
-        assertEquals(pushUnit, event.pushUnit)
+        assertFalse(receiver.isSubscribed(topicB))
     }
 }

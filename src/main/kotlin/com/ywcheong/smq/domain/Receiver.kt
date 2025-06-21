@@ -19,11 +19,7 @@ data class Receiver(
         receiverId = receiverId, subscription = subscription - topic
     )
 
-    fun canReceive(pushUnit: PushUnit): Boolean = subscription.any {
-        pushUnit.topics.contains(it)
-    }
-
-    fun receive(pushUnit: PushUnit): PushDeliveredEvent = PushDeliveredEvent(receiverId, pushUnit)
+    fun isSubscribed(topic: PushTopic): Boolean = subscription.contains(topic)
 
     companion object {
         const val MAX_SUBSCRIPTIONS = 20
