@@ -3,11 +3,50 @@ networks:
     driver: bridge
 
 services:
-  smq-spring-server:
-    container_name: smq-spring-server
+  smq-broker:
+    image: apache/kafka:latest
+    container_name: smq-broker-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://smq-broker:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@smq-broker:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    expose:
+      - "9092"
+    networks:
+      - smq-bridge
+
+  smq-init:
+    image: apache/kafka:latest
+    container_name: smq-init
+    entrypoint: [ "/bin/sh", "-c", "/infra/kafka-init.sh" ]
+    volumes:
+      - ./kafka-init.sh:/infra/kafka-init.sh
+    depends_on:
+      - smq-broker
+    env_file:
+      - ../env/kafka.env
+    networks:
+      - smq-bridge
+
+  smq-server:
+    container_name: smq-server-spring
     build:
       dockerfile: server.Dockerfile
       context: .
+    depends_on:
+      smq-init:
+        condition: service_completed_successfully
+    env_file:
+      - ../env/kafka.env
     ports:
       - "8080:8080"
     networks:

@@ -3,4 +3,4 @@ spring:
     name: simple-websocket-mq
 
 smq:
-  kafka-topic-name: simple-websocket-mq
+  kafka-topic-name: ${KAFKA_TOPIC_NAME}
