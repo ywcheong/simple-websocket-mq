@@ -5,6 +5,18 @@ spring:
     name: simple-websocket-mq
   profiles:
     default: prod # 기본 프로필: [prod]
+  kafka:
+    consumer:
+      group-id: smq-server-group
+      auto-offset-reset: latest # SMQ 특성상 옛날 메시지는 완전히 불필요: ~~earliest~~ vs **latest**
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages:
+          - 'com.ywcheong.smq.domain.PushUnit'
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 smq:
   kafka-topic-name: ${KAFKA_TOPIC_NAME}
@@ -17,16 +29,7 @@ spring:
     activate:
       on-profile: prod
   kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: smq-server-group
-      auto-offset-reset: latest # SMQ 특성상 옛날 메시지는 완전히 불필요: ~~earliest~~ vs **latest**
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
-
+    bootstrap-servers: smq-broker:9092
 
 ---
 
@@ -35,4 +38,5 @@ spring:
   config:
     activate:
       on-profile: dev
-
+  kafka:
+    bootstrap-servers: localhost:9092
