@@ -52,4 +52,14 @@ data class PushTopic(val value: String) {
 
 data class PushUnit(
     val title: PushTitle, val body: PushBody, val topics: Set<PushTopic>, val occuredAt: Date
-)
+) {
+    init {
+        require(topics.size <= MAX_TOPICS_PER_PUSH) {
+            "알림이 가질 수 있는 주제는 ${MAX_TOPICS_PER_PUSH}개를 넘을 수 없습니다. (현재 ${topics.size}개)"
+        }
+    }
+
+    companion object {
+        const val MAX_TOPICS_PER_PUSH = 10
+    }
+}
