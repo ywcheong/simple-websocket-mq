@@ -50,3 +50,12 @@ kotlin {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+tasks.register('dockerMount', Copy) {
+    group = 'build'
+    description = 'Copies the standalone JAR to docker/lib/server.jar'
+    dependsOn bootJar
+    from { bootJar.archiveFile.get().asFile }
+    into "$projectDir/docker/build"
+    rename { 'server.jar' }
+}
