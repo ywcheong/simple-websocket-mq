@@ -18,6 +18,10 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
+springdoc:
+  swagger-ui:
+    path: /api
+
 smq:
   kafka-topic-name: ${KAFKA_TOPIC_NAME}
 
