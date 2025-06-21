@@ -1,6 +1,7 @@
 package com.ywcheong.smq.sender
 
 import com.ywcheong.smq.domain.*
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import java.util.*
+
+private val logger = KotlinLogging.logger {}
 
 data class PushSendRequestDto(
     val title: String,
@@ -44,15 +47,26 @@ class PushSendController @Autowired constructor(
     @PostMapping("/send")
     fun send(
         @RequestBody pushSendRequestDto: PushSendRequestDto
-    ): ResponseEntity<Unit> = when (pushSendService.send(
-        title = PushTitle(pushSendRequestDto.title),
-        body = PushBody(pushSendRequestDto.body),
-        topics = pushSendRequestDto.topics.map {
-            PushTopic(it)
-        }.toSet()
-    )) {
-        true -> ResponseEntity.status(HttpStatus.ACCEPTED).body(null)
-        false -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null)
+    ): ResponseEntity<Unit> {
+        val pushResult: Boolean = pushSendService.send(
+            title = PushTitle(pushSendRequestDto.title),
+            body = PushBody(pushSendRequestDto.body),
+            topics = pushSendRequestDto.topics.map {
+                PushTopic(it)
+            }.toSet()
+        )
+
+        return when (pushResult) {
+            true -> {
+                logger.info { "Push [${pushSendRequestDto.title}] is sent" }
+                ResponseEntity.status(HttpStatus.ACCEPTED).body(null)
+            }
+
+            false -> {
+                logger.info { "Push [${pushSendRequestDto.title}] is not sent" }
+                ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null)
+            }
+        }
     }
 }
 
