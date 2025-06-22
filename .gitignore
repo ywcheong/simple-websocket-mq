@@ -2,6 +2,7 @@ HELP.md
 .gradle
 build/
 docker/build
+docker/volume
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/

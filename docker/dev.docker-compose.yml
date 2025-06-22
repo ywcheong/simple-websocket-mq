@@ -1,10 +1,11 @@
-version: "3.8"
+networks:
+  smq-bridge:
+    driver: bridge
 
 services:
   smq-broker:
     image: apache/kafka:latest
     container_name: smq-broker-kafka
-    network_mode: host
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -18,15 +19,37 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
+    ports:
+      - "9092"
+    networks:
+      - smq-bridge
 
-  smq-init:
+  smq-obs:
+    image: grafana/otel-lgtm:latest
+    container_name: smq-obs-otel-lgtm
+    volumes:
+      - ./volume/grafana:/data/grafana
+      - ./volume/prometheus:/data/prometheus
+      - ./volume/loki:/data/loki
+    env_file:
+      - ../env/obs.env
+    ports:
+      - "4317:4317" # OpenTelemetry gRPC
+      - "4318:4318" # OpenTelemetry HTTP
+      - "3000:3000" # Web dashboard
+    networks:
+      - smq-bridge
+
+  smq-infra-init:
     image: apache/kafka:latest
-    container_name: smq-init
-    network_mode: host
+    container_name: smq-infra-init
     entrypoint: [ "/bin/sh", "-c", "/infra/kafka-init.sh" ]
     volumes:
       - ./kafka-init.sh:/infra/kafka-init.sh
     depends_on:
       - smq-broker
+      - smq-obs
     env_file:
       - ../env/kafka.env
+    networks:
+      - smq-bridge

@@ -24,14 +24,32 @@ services:
     networks:
       - smq-bridge
 
-  smq-init:
+  smq-obs:
+    image: grafana/otel-lgtm:latest
+    container_name: smq-obs-otel-lgtm
+    volumes:
+      - ./volume/grafana:/data/grafana
+      - ./volume/prometheus:/data/prometheus
+      - ./volume/loki:/data/loki
+    env_file:
+      - ../env/obs.env
+    expose:
+      - "4317:4317" # OpenTelemetry gRPC
+      - "4318:4318" # OpenTelemetry HTTP
+    ports:
+      - "3000:3000" # Web dashboard
+    networks:
+      - smq-bridge
+
+  smq-infra-init:
     image: apache/kafka:latest
-    container_name: smq-init
+    container_name: smq-infra-init
     entrypoint: [ "/bin/sh", "-c", "/infra/kafka-init.sh" ]
     volumes:
       - ./kafka-init.sh:/infra/kafka-init.sh
     depends_on:
       - smq-broker
+      - smq-obs
     env_file:
       - ../env/kafka.env
     networks:
@@ -43,7 +61,7 @@ services:
       dockerfile: server.Dockerfile
       context: .
     depends_on:
-      smq-init:
+      smq-infra-init:
         condition: service_completed_successfully
     env_file:
       - ../env/kafka.env
