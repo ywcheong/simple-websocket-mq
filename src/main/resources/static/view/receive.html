@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>SockJS SmqClient Console Only (STOMP SEND 지원)</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script>
+        // STOMP 프레임 생성 유틸리티
+        function stompFrame(command, headers = {}, body = '') {
+            let frame = command + '\n';
+            for (const key in headers) {
+                frame += key + ':' + headers[key] + '\n';
+            }
+            frame += '\n' + body + '\0';
+            return frame;
+        }
+
+        class SmqClient {
+            constructor() {
+                this.sock = null;
+                this.connected = false;
+                this.stompConnected = false;
+            }
+
+            connect() {
+                if (this.sock && this.connected) {
+                    console.log('이미 연결되어 있습니다.');
+                    return;
+                }
+                this.sock = new SockJS('http://localhost:8080/receiver');
+                this.sock.onopen = () => {
+                    this.connected = true;
+                    console.log('SockJS 연결됨');
+                    // STOMP CONNECT 프레임 전송
+                    const connectFrame = stompFrame('CONNECT', {
+                        'accept-version': '1.2',
+                        'host': 'localhost'
+                    });
+                    this.sock.send(connectFrame);
+                    console.log('STOMP CONNECT 프레임 전송');
+                };
+                this.sock.onmessage = (e) => {
+                    // STOMP CONNECTED 프레임 확인
+                    if (e.data.startsWith('CONNECTED')) {
+                        this.stompConnected = true;
+                        console.log('STOMP 연결 성공:', e.data);
+                        // /user/queue 구독 자동 추가
+                        const subscribeFrame = stompFrame('SUBSCRIBE', {
+                            id: 'sub-user-queue',
+                            destination: '/user/queue'
+                        });
+                        this.sock.send(subscribeFrame);
+                        console.log('자동 구독: /user/queue');
+                    } else if (e.data.startsWith('ERROR')) {
+                        console.error('STOMP 오류:', e.data);
+                    } else {
+                        console.log('수신:', e.data);
+                    }
+                };
+                this.sock.onclose = () => {
+                    this.connected = false;
+                    this.stompConnected = false;
+                    console.log('SockJS 연결 종료');
+                };
+                this.sock.onerror = (e) => {
+                    console.error('SockJS 오류', e);
+                };
+            }
+
+
+            subscribe(topic) {
+                if (!this.connected || !this.stompConnected) {
+                    console.warn('STOMP 연결 후 사용하세요.');
+                    return;
+                }
+                const frame = stompFrame('SUBSCRIBE', {
+                    id: 'sub-' + topic,
+                    destination: `/topic/${topic}`
+                });
+                this.sock.send(frame);
+                console.log(`구독 요청: /topic/${topic}`);
+            }
+
+            unsubscribe(topic) {
+                if (!this.connected || !this.stompConnected) {
+                    console.warn('STOMP 연결 후 사용하세요.');
+                    return;
+                }
+                const frame = stompFrame('UNSUBSCRIBE', {
+                    id: 'sub-' + topic
+                });
+                this.sock.send(frame);
+                console.log(`구독 해제 요청: /topic/${topic}`);
+            }
+
+            send(topic, stringPayload) {
+                if (!this.connected || !this.stompConnected) {
+                    console.warn('STOMP 연결 후 사용하세요.');
+                    return;
+                }
+                const frame = stompFrame('SEND', {
+                    destination: `/topic/${topic}`,
+                    'content-type': 'text/plain'
+                }, stringPayload);
+                this.sock.send(frame);
+                console.log(`메시지 발행: /topic/${topic} →`, stringPayload);
+            }
+
+            disconnect() {
+                if (this.sock && this.connected) {
+                    // STOMP DISCONNECT 프레임 전송
+                    if (this.stompConnected) {
+                        const disconnectFrame = stompFrame('DISCONNECT');
+                        this.sock.send(disconnectFrame);
+                        console.log('STOMP DISCONNECT 프레임 전송');
+                    }
+                    this.sock.close();
+                    this.sock = null;
+                    this.connected = false;
+                    this.stompConnected = false;
+                    console.log('연결 종료 요청');
+                }
+            }
+        }
+
+        // 콘솔에서 바로 사용 가능
+        window.SmqClient = SmqClient;
+        console.log(`SmqClient 사용 예시:
+let client = new SmqClient();
+client.connect();
+client.subscribe("test");
+client.send("test", "hello world!");
+client.unsubscribe("test");
+client.disconnect();`);
+    </script>
+</head>
+<body>
+<h3>콘솔에서 SmqClient를 사용하세요 (GUI 없음)</h3>
+<p>브라우저 개발자 도구 콘솔을 열고 <code>SmqClient</code>를 사용하세요.</p>
+</body>
+</html>
