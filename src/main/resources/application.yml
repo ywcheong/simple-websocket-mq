@@ -10,10 +10,10 @@ spring:
       group-id: smq-server-group
       auto-offset-reset: latest # SMQ 특성상 옛날 메시지는 완전히 불필요: ~~earliest~~ vs **latest**
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
-        spring.json.trusted.packages:
-          - 'com.ywcheong.smq.domain.PushUnit'
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: com.ywcheong.smq.domain
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
