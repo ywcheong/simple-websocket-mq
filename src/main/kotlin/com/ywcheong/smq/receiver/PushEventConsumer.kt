@@ -6,34 +6,37 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.kafka.annotation.KafkaListener
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Controller
+import org.springframework.stereotype.Service
 
 private val logger = KotlinLogging.logger {}
 
-interface MessageReceiver {
-    fun receive(pushUnit: PushUnit)
-}
+// EventReceiver -> EventHandler 구조가 Controller -> Service 와 유사해 이렇게 Annotate
 
-@Component
+@Controller
 class KafkaMessageReceiver constructor(
     private val receiverRepository: ReceiverRepository, private val events: ApplicationEventPublisher
-) : MessageReceiver {
+) {
     @KafkaListener(topics = ["\${smq.kafka-topic-name}"])
-    override fun receive(pushUnit: PushUnit) {
+    fun receive(pushUnit: PushUnit) {
         logger.info { "PushUnit [$pushUnit] comes from Kafka" }
         val messageTopics = pushUnit.topics.toList()
         receiverRepository.findAllWithTopics(messageTopics).forEach { receiver ->
+            // 도메인 이벤트 PushDeliveredEvent 발생
             events.publishEvent(PushDeliveredEvent(receiver, pushUnit))
         }
     }
 }
 
-@Component
-class PushDeliveredEventHandler {
+@Service
+class PushDeliveredEventHandler(
+    private val pushToClientService: PushToClientService
+) {
     @EventListener
     fun handle(pushDeliveredEvent: PushDeliveredEvent) {
+        // 도메인 이벤트 PushDeliveredEvent 처리
         val (receiver, pushUnit) = pushDeliveredEvent
         logger.info { "PushDeliveredEvent: PushUnit[title=${pushUnit.title}] -> Receiver[${receiver.receiverId.id}]" }
-        TODO("Websocket Callback")
+        pushToClientService.push(receiver, pushUnit)
     }
 }
