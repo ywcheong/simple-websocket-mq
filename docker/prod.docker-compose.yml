@@ -65,8 +65,11 @@ services:
         condition: service_completed_successfully
     env_file:
       - ../env/kafka.env
+      - ../env/server.prod.env
     ports:
       - "8080:8080"
     networks:
       - smq-bridge
-    command: [ "java", "-jar", "/app/server.jar" ]
+    entrypoint: [ "java",
+               "-javaagent:/app/opentelemetry-javaagent.jar",
+               "-jar", "/app/server.jar" ]

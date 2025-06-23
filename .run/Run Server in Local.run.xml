@@ -3,6 +3,7 @@
     <option name="ACTIVE_PROFILES" value="dev" />
     <option name="envFilePaths">
       <option value="$PROJECT_DIR$/env/kafka.env" />
+      <option value="$PROJECT_DIR$/env/server.dev.env" />
     </option>
     <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
     <module name="simple-websocket-mq.main" />
@@ -10,6 +11,7 @@
       <option name="environmentVariables" />
     </selectedOptions>
     <option name="SPRING_BOOT_MAIN_CLASS" value="com.ywcheong.smq.SimpleWebsocketMqApplication" />
+    <option name="VM_PARAMETERS" value="-javaagent:$ProjectFileDir$/libs/opentelemetry-javaagent.jar" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
