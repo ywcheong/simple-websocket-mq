@@ -30,7 +30,7 @@ class WebSocketEventListener(
         logger_.info { "WebSocket CONNECT SUCCESS: Principal=$user" }
 
         check(user != null) {
-            throw IllegalStateException("Principal 정보를 찾을 수 없습니다. (세션 ID = ${accessor.sessionId})")
+            "Principal 정보를 찾을 수 없습니다. (세션 ID = ${accessor.sessionId})"
         }
 
         receiverService.connected(user.name)
@@ -44,7 +44,7 @@ class WebSocketEventListener(
         logger_.info { "WebSocket DISCONNECT: Principal=$user" }
 
         check(user != null) {
-            throw IllegalStateException("Principal 정보를 찾을 수 없습니다. (세션 ID = ${accessor.sessionId})")
+            "Principal 정보를 찾을 수 없습니다. (세션 ID = ${accessor.sessionId})"
         }
 
         receiverService.disconnected(user.name)
@@ -59,14 +59,14 @@ class WebSocketEventListener(
         logger_.info { "WebSocket SUBSCRIBE: Principal=$user, Destination=$destination" }
 
         check(user != null) {
-            throw IllegalStateException("Principal 정보를 찾을 수 없습니다. (세션 ID = ${accessor.sessionId})")
+            "Principal 정보를 찾을 수 없습니다. (세션 ID = ${accessor.sessionId})"
         }
 
         check(destination != null) {
-            throw IllegalArgumentException("유효하지 않은 목적지입니다.")
+            "헤더 정보에서 목적지가 없습니다."
         }
 
-        receiverService.subscribe(user.name, destinationToTopicString(destination))
+        receiverService.subscribe(user.name, removePrefixWithCheck(destination, DESTINATION_PREFIX))
     }
 
     // 구독 해제 요청
@@ -74,29 +74,30 @@ class WebSocketEventListener(
     fun handleSessionUnsubscribe(event: SessionUnsubscribeEvent) {
         val accessor = StompHeaderAccessor.wrap(event.message)
         val user = accessor.user
-        val destination = accessor.destination
-        logger_.info { "WebSocket UNSUBSCRIBE: Principal=$user, Destination=$destination" }
+        val id = accessor.subscriptionId
+        logger_.info { "WebSocket UNSUBSCRIBE: Principal=$user, Id=$id" }
 
         check(user != null) {
-            throw IllegalStateException("Principal 정보를 찾을 수 없습니다. (세션 ID = ${accessor.sessionId})")
+            "Principal 정보를 찾을 수 없습니다. (세션 ID = ${accessor.sessionId})"
         }
 
-        check(destination != null) {
-            throw IllegalArgumentException("유효하지 않은 목적지입니다.")
+        check(id != null) {
+            "헤더 정보에서 구독 ID 가 없습니다."
         }
 
-        receiverService.unsubscribe(user.name, destinationToTopicString(destination))
-    }
-
-    private fun destinationToTopicString(destination: String): String {
-        require(destination.startsWith(TOPIC_HEADER)) {
-            "목적지 ${destination}이 ${TOPIC_HEADER}로 시작해야 합니다."
-        }
-
-        return destination.removePrefix(TOPIC_HEADER)
+        receiverService.unsubscribe(user.name, removePrefixWithCheck(id, ID_PREFIX))
     }
 
     companion object {
-        const val TOPIC_HEADER = "/topic/"
+        const val DESTINATION_PREFIX = "/topic/"
+        const val ID_PREFIX = "sub-"
+
+        private fun removePrefixWithCheck(target: String, prefix: String): String {
+            require(target.startsWith(prefix)) {
+                "${target}이 유효하지 않습니다. ${prefix}로 시작해야 합니다."
+            }
+
+            return target.removePrefix(prefix)
+        }
     }
 }
