@@ -1,7 +1,7 @@
 #!/bin/bash
 
-PROD_COMPOSE_FILE="./docker/prod.docker-compose.yml"
-DEV_COMPOSE_FILE="./docker/dev.docker-compose.yml"
+PROD_COMPOSE_FILE="./docker/docker-compose.prod.yml"
+DEV_COMPOSE_FILE="./docker/docker-compose.dev.yml"
 
 case "$1" in
   prod)

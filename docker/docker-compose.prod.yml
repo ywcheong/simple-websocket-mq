@@ -10,16 +10,16 @@ services:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://smq-broker:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@smq-broker:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
-    ports:
+    expose:
       - "9092:9092"
     networks:
       - smq-bridge
@@ -33,9 +33,10 @@ services:
       - ./volume/loki:/data/loki
     env_file:
       - ../env/obs.env
-    ports:
+    expose:
       - "4317:4317" # OpenTelemetry gRPC
       - "4318:4318" # OpenTelemetry HTTP
+    ports:
       - "3000:3000" # Web dashboard
     networks:
       - smq-bridge
@@ -43,9 +44,9 @@ services:
   smq-infra-init:
     image: apache/kafka:latest
     container_name: smq-infra-init
-    entrypoint: [ "/bin/sh", "-c", "/infra/kafka-init.sh" ]
+    entrypoint: [ "/bin/sh", "-c", "/infra/kafka-init.base.sh" ]
     volumes:
-      - ./kafka-init.sh:/infra/kafka-init.sh
+      - ./kafka-init.base.sh:/infra/kafka-init.base.sh
     depends_on:
       - smq-broker
       - smq-obs
@@ -53,3 +54,22 @@ services:
       - ../env/kafka.env
     networks:
       - smq-bridge
+
+  smq-server:
+    container_name: smq-server-spring
+    build:
+      context: ../
+      dockerfile: server.prod.Dockerfile
+    depends_on:
+      smq-infra-init:
+        condition: service_completed_successfully
+    env_file:
+      - ../env/kafka.env
+      - ../env/server.prod.env
+    ports:
+      - "8080:8080"
+    networks:
+      - smq-bridge
+    entrypoint: [ "java",
+               "-javaagent:/app/opentelemetry-javaagent.jar",
+               "-jar", "/app/server.jar" ]
