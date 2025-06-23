@@ -58,8 +58,8 @@ services:
   smq-server:
     container_name: smq-server-spring
     build:
-      dockerfile: server.Dockerfile
-      context: .
+      context: ../
+      dockerfile: docker/prod.server.Dockerfile
     depends_on:
       smq-infra-init:
         condition: service_completed_successfully
