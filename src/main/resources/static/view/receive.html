@@ -132,10 +132,43 @@ client.subscribe("test");
 client.send("test", "hello world!");
 client.unsubscribe("test");
 client.disconnect();`);
+
+        // 일부러 전역변수 선언 : 디버그 편의 목적
+        var sClient;
+
+        function scenarioCommon(callback) {
+            sClient = new SmqClient();
+            sClient.connect();
+            setTimeout(() => {
+                sClient.subscribe("testDefault");
+                if (callback) callback(sClient);
+            }, 1000);
+        }
+
+        // Scenario A: testDefault 구독 후 1초 뒤 testA 구독
+        function scenarioA() {
+            scenarioCommon((client) => {
+                setTimeout(() => {
+                    client.subscribe("testA");
+                }, 1000);
+            });
+        }
+
+        // Scenario B: testDefault 구독 후 1초 뒤 testB 구독
+        function scenarioB() {
+            scenarioCommon((client) => {
+                setTimeout(() => {
+                    client.subscribe("testB");
+                }, 1000);
+            });
+        }
     </script>
 </head>
 <body>
-<h3>콘솔에서 SmqClient를 사용하세요 (GUI 없음)</h3>
-<p>브라우저 개발자 도구 콘솔을 열고 <code>SmqClient</code>를 사용하세요.</p>
+<h1>SimpleWebsocketMQ</h1>
+<h3>SMQ: Client</h3>
+<p>Open Console (F12)</p>
+<button onclick="scenarioA()">Test Scenario A</button>
+<button onclick="scenarioB()">Test Scenario B</button>
 </body>
 </html>
