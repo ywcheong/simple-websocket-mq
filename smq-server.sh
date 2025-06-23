@@ -14,6 +14,8 @@ case "$1" in
     echo "Cleaning Gradle build files..."
     ./gradlew clean
     ./gradlew --stop
+    echo "Wiping docker volume files..."
+    rm -rf ./docker/volume
     exit 0
     ;;
   *)
@@ -27,7 +29,7 @@ case "$2" in
     echo "Building and copying server.jar..."
     ./gradlew dockerMount
     echo "Starting Docker Compose services..."
-    docker compose -f "$COMPOSE_FILE" up -d
+    docker compose -f "$COMPOSE_FILE" up -d --build
     if [ $? -ne 0 ]; then
         sleep 1s
         $0 $1 stop
